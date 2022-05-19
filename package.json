@@ -1,0 +1,25 @@
+{
+	"name": "obsidian-columns",
+	"version": "0.0.1",
+	"description": "Allows you to render molecule inside Obsidian using SMILES (https://github.com/tnichols217/obsidian-molecule-renderer)",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"version": "npm run build && node version-bump.mjs",
+		"mon": "nodemon -x yarn build -w main.ts"
+	},
+	"keywords": [],
+	"author": "Trevor Nichols",
+	"license": "GPL-3.0-or-later",
+	"devDependencies": {
+		"@types/node": "^16.11.6",
+		"@typescript-eslint/eslint-plugin": "^5.2.0",
+		"@typescript-eslint/parser": "^5.2.0",
+		"builtin-modules": "^3.2.0",
+		"esbuild": "0.13.12",
+		"obsidian": "^0.14.6",
+		"tslib": "2.3.1",
+		"typescript": "4.4.4"
+	}
+}
