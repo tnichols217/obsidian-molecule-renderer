@@ -2,7 +2,7 @@
 	"id": "obsidian-molecule-renderer",
 	"name": "Obsidian Molecule Renderer",
 	"minAppVersion": "0.12.0",
-	"description": "Allows you to create columns in Obsidian Markdown",
+	"description": "Allows you to render molecule inside Obsidian using SMILES (https://github.com/tnichols217/obsidian-molecule-renderer)",
 	"author": "Trevor Nichols",
 	"authorUrl": "https://github.com/tnichols217/obsidian-columns",
 	"isDesktopOnly": false,

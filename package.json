@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-columns",
+	"name": "obsidian-molecule-renderer",
 	"version": "0.0.1",
 	"description": "Allows you to render molecule inside Obsidian using SMILES (https://github.com/tnichols217/obsidian-molecule-renderer)",
 	"main": "main.js",
@@ -21,5 +21,8 @@
 		"obsidian": "^0.14.6",
 		"tslib": "2.3.1",
 		"typescript": "4.4.4"
+	},
+	"dependencies": {
+		"smiles-drawer": "^1.2.0"
 	}
 }
