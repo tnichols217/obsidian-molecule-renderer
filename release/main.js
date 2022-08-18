@@ -49,225 +49,149 @@ var __async = (__this, __arguments, generator) => {
 
 // main.ts
 __export(exports, {
-  default: () => ObsidianColumns
+  default: () => ObsidianMoleculeRenderer
 });
+var import_obsidian2 = __toModule(require("obsidian"));
+
+// obsidian-settings/settings.ts
 var import_obsidian = __toModule(require("obsidian"));
-var COLUMNNAME = "col";
-var COLUMNMD = COLUMNNAME + "-md";
-var TOKEN = "!!!";
-var SETTINGSDELIM = "\n===\n";
-var DEFAULT_SETTINGS = {
-  wrapSize: { value: 100, name: "Minimum width of column", desc: "Columns will have this minimum width before wrapping to a new row. 0 disables column wrapping. Useful for smaller devices" },
-  defaultSpan: { value: 1, name: "The default span of an item", desc: "The default width of a column. If the minimum width is specified, the width of the column will be multiplied by this setting." }
+var parseBoolean = (value) => {
+  return value == "yes" || value == "true";
 };
-var parseSettings = (settings) => {
-  let o = {};
-  settings.split("\n").map((i) => {
-    return i.split(";");
-  }).reduce((a, b) => {
-    a.push(...b);
-    return a;
-  }).map((i) => {
-    return i.split("=").map((j) => {
-      return j.trim();
-    }).slice(0, 2);
-  }).forEach((i) => {
-    o[i[0]] = i[1];
+var parseObject = (value, typ) => {
+  if (typ == "string") {
+    return value;
+  }
+  if (typ == "boolean") {
+    return parseBoolean(value);
+  }
+  if (typ == "number") {
+    return parseFloat(value);
+  }
+};
+function display(obj, DEFAULT_SETTINGS2, name) {
+  const { containerEl } = obj;
+  containerEl.empty();
+  containerEl.createEl("h2", { text: "Settings for " + name });
+  let keyvals = Object.entries(DEFAULT_SETTINGS2);
+  for (let keyval of keyvals) {
+    let setting = new import_obsidian.Setting(containerEl).setName(keyval[1].name).setDesc(keyval[1].desc);
+    if (typeof keyval[1].value == "boolean") {
+      setting.addToggle((toggle) => toggle.setValue(obj.plugin.settings[keyval[0]].value).onChange((bool) => {
+        obj.plugin.settings[keyval[0]].value = bool;
+        obj.plugin.saveSettings();
+      }));
+    } else {
+      setting.addText((text) => text.setPlaceholder(String(keyval[1].value)).setValue(String(obj.plugin.settings[keyval[0]].value)).onChange((value) => {
+        obj.plugin.settings[keyval[0]].value = parseObject(value, typeof keyval[1].value);
+        obj.plugin.saveSettings();
+      }));
+    }
+  }
+}
+function loadSettings(obj, DEFAULT_SETTINGS2) {
+  obj.settings = DEFAULT_SETTINGS2;
+  obj.loadData().then((data) => {
+    if (data) {
+      let items = Object.entries(data);
+      items.forEach((item) => {
+        obj.settings[item[0]].value = item[1];
+      });
+    }
   });
-  return o;
+}
+function saveSettings(obj, DEFAULT_SETTINGS2) {
+  return __async(this, null, function* () {
+    let saveData = {};
+    Object.entries(obj.settings).forEach((i) => {
+      saveData[i[0]] = i[1].value;
+    });
+    yield obj.saveData(saveData);
+  });
+}
+
+// main.ts
+var NAME = "Obsidian Molecule Renderer";
+var CODEBLOCK = "molecule";
+var CODEBLOCK3D = "molecule3d";
+var DEFAULT_SETTINGS = {
+  a: { value: "a", name: "a", desc: "a" }
 };
-var ObsidianColumns = class extends import_obsidian.Plugin {
-  constructor() {
-    super(...arguments);
-    this.generateCssString = (span) => {
-      let o = {};
-      o.flexGrow = span.toString();
-      o.flexBasis = (this.settings.wrapSize.value * span).toString() + "px";
-      o.width = (this.settings.wrapSize.value * span).toString() + "px";
-      return o;
-    };
-    this.applyStyle = (el, styles) => {
-      Object.assign(el.style, styles);
-    };
-    this.parseBoolean = (value) => {
-      return value == "yes" || value == "true";
-    };
-    this.parseObject = (value, typ) => {
-      if (typ == "string") {
-        return value;
+var ObsidianMoleculeRenderer = class extends import_obsidian2.Plugin {
+  getMolecule(src) {
+    return __async(this, null, function* () {
+      return JSON.parse(yield (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/" + src + "/property/MolecularFormula/JSON" }));
+    });
+  }
+  moleculeNotFound(src, el) {
+    return __async(this, null, function* () {
+      let heading = el.createEl("h1");
+      heading.innerText = "Chemical Not found";
+      heading = el.createEl("h2");
+      heading.innerText = "Similar Chemicals include:";
+      let suggestions = JSON.parse(yield (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/" + src })).dictionary_terms.compound;
+      let list = el.createEl("ol");
+      for (let i of suggestions) {
+        let item = list.createEl("li");
+        item.innerText = i.toLowerCase();
       }
-      if (typ == "boolean") {
-        return this.parseBoolean(value);
-      }
-      if (typ == "number") {
-        return parseFloat(value);
-      }
-    };
-    this.processChild = (c) => {
-      if (c.firstChild != null && "tagName" in c.firstChild && c.firstChild.tagName == "BR") {
-        c.removeChild(c.firstChild);
-      }
-      let firstChild = c;
-      while (firstChild != null) {
-        if ("style" in firstChild) {
-          firstChild.style.marginTop = "0px";
-        }
-        firstChild = firstChild.firstChild;
-      }
-      let lastChild = c;
-      while (lastChild != null) {
-        if ("style" in lastChild) {
-          lastChild.style.marginBottom = "0px";
-        }
-        lastChild = lastChild.lastChild;
-      }
-    };
+    });
   }
   onload() {
     return __async(this, null, function* () {
       yield this.loadSettings();
-      this.addSettingTab(new ObsidianColumnsSettings(this.app, this));
-      this.registerMarkdownCodeBlockProcessor(COLUMNMD, (source, el, ctx) => {
-        let split = source.split(SETTINGSDELIM);
-        let settings = {};
-        if (split.length > 1) {
-          source = split.slice(1).join(SETTINGSDELIM);
-          settings = parseSettings(split[0]);
+      this.addSettingTab(new ObsidianMoleculeRendererSettings(this.app, this));
+      this.registerMarkdownCodeBlockProcessor(CODEBLOCK, (src, el, ctx) => __async(this, null, function* () {
+        let req = yield this.getMolecule(src);
+        if ("Fault" in req) {
+          this.moleculeNotFound(src, el);
+        } else {
+          console.log(req);
+          let CID = req.PropertyTable.Properties[0].CID;
+          let img = el.createEl("img");
+          img.src = "https://pubchem.ncbi.nlm.nih.gov/image/imagefly.cgi?cid=" + CID + "&width=500&height=500";
         }
-        const sourcePath = ctx.sourcePath;
-        let child = el.createDiv();
-        let renderChild = new import_obsidian.MarkdownRenderChild(child);
-        ctx.addChild(renderChild);
-        import_obsidian.MarkdownRenderer.renderMarkdown(source, child, sourcePath, renderChild);
-        if ("flexGrow" in settings) {
-          let flexGrow = parseFloat(settings.flexGrow);
-          let CSS = this.generateCssString(flexGrow);
-          delete CSS.width;
-          this.applyStyle(child, CSS);
+      }));
+      this.registerMarkdownCodeBlockProcessor(CODEBLOCK3D, (src, el, ctx) => __async(this, null, function* () {
+        let req = yield this.getMolecule(src);
+        if ("Fault" in req) {
+          this.moleculeNotFound(src, el);
+        } else {
+          let CID = req.PropertyTable.Properties[0].CID;
+          let container = el.createDiv();
+          container.style.width = "100%";
+          container.style.paddingTop = "100%";
+          container.style.position = "relative";
+          let iframe = container.createEl("iframe");
+          iframe.src = "https://embed.molview.org/v1/?mode=balls&cid=" + CID;
+          iframe.style.width = "100%";
+          iframe.style.height = "100%";
+          iframe.style.position = "absolute";
+          iframe.style.top = "0";
+          iframe.style.border = "0";
         }
-      });
-      this.registerMarkdownCodeBlockProcessor(COLUMNNAME, (source, el, ctx) => {
-        const sourcePath = ctx.sourcePath;
-        let child = createDiv();
-        let renderChild = new import_obsidian.MarkdownRenderChild(child);
-        ctx.addChild(renderChild);
-        import_obsidian.MarkdownRenderer.renderMarkdown(source, child, sourcePath, renderChild);
-        let parent = el.createEl("div", { cls: "columnParent" });
-        Array.from(child.children).forEach((c) => {
-          let cc = parent.createEl("div", { cls: "columnChild" });
-          let renderCc = new import_obsidian.MarkdownRenderChild(cc);
-          ctx.addChild(renderCc);
-          this.applyStyle(cc, this.generateCssString(this.settings.defaultSpan.value));
-          cc.appendChild(c);
-          if (c.classList.contains("block-language-" + COLUMNMD) && c.childNodes[0].style.flexGrow != "") {
-            cc.style.flexGrow = c.childNodes[0].style.flexGrow;
-            cc.style.flexBasis = c.childNodes[0].style.flexBasis;
-            cc.style.width = c.childNodes[0].style.flexBasis;
-          }
-          this.processChild(c);
-        });
-      });
-      let processList = (element, context) => {
-        for (let child of Array.from(element.children)) {
-          if (child == null) {
-            continue;
-          }
-          if (child.nodeName != "UL" && child.nodeName != "OL") {
-            continue;
-          }
-          for (let listItem of Array.from(child.children)) {
-            if (listItem == null) {
-              continue;
-            }
-            if (!listItem.textContent.trim().startsWith(TOKEN + COLUMNNAME)) {
-              processList(listItem, context);
-              continue;
-            }
-            child.removeChild(listItem);
-            let colParent = element.createEl("div", { cls: "columnParent" });
-            let renderColP = new import_obsidian.MarkdownRenderChild(colParent);
-            context.addChild(renderColP);
-            let itemList = listItem.querySelector("ul, ol");
-            if (itemList == null) {
-              continue;
-            }
-            for (let itemListItem of Array.from(itemList.children)) {
-              let childDiv = colParent.createEl("div", { cls: "columnChild" });
-              let renderColC = new import_obsidian.MarkdownRenderChild(childDiv);
-              context.addChild(renderColC);
-              let span = parseFloat(itemListItem.textContent.split("\n")[0].split(" ")[0]);
-              if (isNaN(span)) {
-                span = this.settings.defaultSpan.value;
-              }
-              this.applyStyle(childDiv, this.generateCssString(span));
-              let afterText = false;
-              processList(itemListItem, context);
-              for (let itemListItemChild of Array.from(itemListItem.childNodes)) {
-                if (afterText) {
-                  childDiv.appendChild(itemListItemChild);
-                }
-                if (itemListItemChild.nodeName == "#text") {
-                  afterText = true;
-                }
-              }
-              this.processChild(childDiv);
-            }
-          }
-        }
-      };
-      this.registerMarkdownPostProcessor((element, context) => {
-        processList(element, context);
-      });
+      }));
     });
   }
   onunload() {
   }
   loadSettings() {
     return __async(this, null, function* () {
-      this.settings = DEFAULT_SETTINGS;
-      this.loadData().then((data) => {
-        if (data) {
-          let items = Object.entries(data);
-          items.forEach((item) => {
-            this.settings[item[0]].value = item[1];
-          });
-        }
-      });
+      loadSettings(this, DEFAULT_SETTINGS);
     });
   }
   saveSettings() {
     return __async(this, null, function* () {
-      let saveData = {};
-      Object.entries(this.settings).forEach((i) => {
-        saveData[i[0]] = i[1].value;
-      });
-      yield this.saveData(saveData);
+      yield saveSettings(this, DEFAULT_SETTINGS);
     });
   }
 };
-var ObsidianColumnsSettings = class extends import_obsidian.PluginSettingTab {
+var ObsidianMoleculeRendererSettings = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
   display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Settings for obsidian-columns" });
-    let keyvals = Object.entries(DEFAULT_SETTINGS);
-    for (let keyval of keyvals) {
-      let setting = new import_obsidian.Setting(containerEl).setName(keyval[1].name).setDesc(keyval[1].desc);
-      if (typeof keyval[1].value == "boolean") {
-        setting.addToggle((toggle) => toggle.setValue(this.plugin.settings[keyval[0]].value).onChange((bool) => {
-          this.plugin.settings[keyval[0]].value = bool;
-          this.plugin.saveSettings();
-        }));
-      } else {
-        setting.addText((text) => text.setPlaceholder(String(keyval[1].value)).setValue(String(this.plugin.settings[keyval[0]].value)).onChange((value) => {
-          this.plugin.settings[keyval[0]].value = this.plugin.parseObject(value, typeof keyval[1].value);
-          this.plugin.saveSettings();
-        }));
-      }
-    }
+    display(this, DEFAULT_SETTINGS, NAME);
   }
 };
