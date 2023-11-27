@@ -14,7 +14,7 @@ let versions = JSON.parse(readFileSync("versions.json", "utf8"));
 versions[targetVersion] = minAppVersion;
 writeFileSync("versions.json", JSON.stringify(versions, null, "\t"));
 
-console.log("test")
+console.log("Copying files to release...")
 for (let file of FILES) {
     copyFile(file, "release/" + file, (e) => {if (e) {console.log(e)}})
 }

@@ -115,12 +115,16 @@ var NAME = "Obsidian Molecule Renderer";
 var CODEBLOCK = "molecule";
 var CODEBLOCK3D = "molecule3d";
 var DEFAULT_SETTINGS = {
-  a: { value: "a", name: "a", desc: "a" }
+  imageSize: { value: 500, name: "Image Size", desc: "Default image size" }
 };
 var ObsidianMoleculeRenderer = class extends import_obsidian2.Plugin {
   getMolecule(src) {
     return __async(this, null, function* () {
-      return JSON.parse(yield (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/" + src + "/property/MolecularFormula/JSON" }));
+      return new Promise((resolve, reject) => __async(this, null, function* () {
+        (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/" + src + "/property/MolecularFormula/JSON" }).then((value) => {
+          resolve(JSON.parse(value));
+        }).catch(reject);
+      }));
     });
   }
   moleculeNotFound(src, el) {
@@ -129,12 +133,17 @@ var ObsidianMoleculeRenderer = class extends import_obsidian2.Plugin {
       heading.innerText = "Chemical Not found";
       heading = el.createEl("h2");
       heading.innerText = "Similar Chemicals include:";
-      let suggestions = JSON.parse(yield (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/" + src })).dictionary_terms.compound;
-      let list = el.createEl("ol");
-      for (let i of suggestions) {
-        let item = list.createEl("li");
-        item.innerText = i.toLowerCase();
-      }
+      (0, import_obsidian2.request)({ url: "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/" + src }).then((value) => {
+        var _a, _b;
+        let suggestions = (_b = (_a = JSON.parse(value)) == null ? void 0 : _a.dictionary_terms) == null ? void 0 : _b.compound;
+        let list = el.createEl("ol");
+        console.log(suggestions);
+        suggestions = suggestions != null ? suggestions : [];
+        for (let i of suggestions) {
+          let item = list.createEl("li");
+          item.innerText = i.toLowerCase();
+        }
+      }).catch(console.error);
     });
   }
   onload() {
@@ -142,34 +151,39 @@ var ObsidianMoleculeRenderer = class extends import_obsidian2.Plugin {
       yield this.loadSettings();
       this.addSettingTab(new ObsidianMoleculeRendererSettings(this.app, this));
       this.registerMarkdownCodeBlockProcessor(CODEBLOCK, (src, el, ctx) => __async(this, null, function* () {
-        let req = yield this.getMolecule(src);
-        if ("Fault" in req) {
+        this.getMolecule(src).then((value) => {
+          if (!value || "Fault" in value) {
+            this.moleculeNotFound(src, el);
+          } else {
+            let CID = value.PropertyTable.Properties[0].CID;
+            let img = el.createEl("img");
+            img.src = "https://pubchem.ncbi.nlm.nih.gov/image/imagefly.cgi?cid=" + CID + `&width=${this.settings.imageSize.value.toString()}&height=${this.settings.imageSize.value.toString()}`;
+          }
+        }).catch((_) => {
           this.moleculeNotFound(src, el);
-        } else {
-          console.log(req);
-          let CID = req.PropertyTable.Properties[0].CID;
-          let img = el.createEl("img");
-          img.src = "https://pubchem.ncbi.nlm.nih.gov/image/imagefly.cgi?cid=" + CID + "&width=500&height=500";
-        }
+        });
       }));
       this.registerMarkdownCodeBlockProcessor(CODEBLOCK3D, (src, el, ctx) => __async(this, null, function* () {
-        let req = yield this.getMolecule(src);
-        if ("Fault" in req) {
+        this.getMolecule(src).then((value) => {
+          if (!value || "Fault" in value) {
+            this.moleculeNotFound(src, el);
+          } else {
+            let CID = value.PropertyTable.Properties[0].CID;
+            let container = el.createDiv();
+            container.style.width = "100%";
+            container.style.paddingTop = "100%";
+            container.style.position = "relative";
+            let iframe = container.createEl("iframe");
+            iframe.src = "https://embed.molview.org/v1/?mode=balls&cid=" + CID;
+            iframe.style.width = "100%";
+            iframe.style.height = "100%";
+            iframe.style.position = "absolute";
+            iframe.style.top = "0";
+            iframe.style.border = "0";
+          }
+        }).catch((_) => {
           this.moleculeNotFound(src, el);
-        } else {
-          let CID = req.PropertyTable.Properties[0].CID;
-          let container = el.createDiv();
-          container.style.width = "100%";
-          container.style.paddingTop = "100%";
-          container.style.position = "relative";
-          let iframe = container.createEl("iframe");
-          iframe.src = "https://embed.molview.org/v1/?mode=balls&cid=" + CID;
-          iframe.style.width = "100%";
-          iframe.style.height = "100%";
-          iframe.style.position = "absolute";
-          iframe.style.top = "0";
-          iframe.style.border = "0";
-        }
+        });
       }));
     });
   }
