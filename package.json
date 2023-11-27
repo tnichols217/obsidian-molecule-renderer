@@ -1,6 +1,6 @@
 {
 	"name": "molecule-renderer",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Allows you to render molecule inside Obsidian using SMILES (https://github.com/tnichols217/obsidian-molecule-renderer)",
 	"main": "main.js",
 	"scripts": {
