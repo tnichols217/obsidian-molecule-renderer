@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-function-plot",
-	"name": "Obsidian Function Plot",
+	"id": "obsidian-molecule-renderer",
+	"name": "Obsidian Molecule Renderer",
 	"minAppVersion": "0.12.0",
-	"description": "Plots things with function-plot",
+	"description": "Allows you to render molecule inside Obsidian using SMILES (https://github.com/tnichols217/obsidian-molecule-renderer)",
 	"author": "Trevor Nichols",
-	"authorUrl": "https://github.com/tnichols217/obsidian-function-plot",
+	"authorUrl": "https://github.com/tnichols217/obsidian-columns",
 	"isDesktopOnly": false,
-	"version": "0.0.3"
+	"version": "0.0.2"
 }
